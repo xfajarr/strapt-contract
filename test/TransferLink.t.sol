@@ -837,8 +837,8 @@ contract TransferLinkTest is Test {
     }
 
     function test_MaxFeeTransfer() public {
-        // Deploy contract with maximum fee (100%)
-        TransferLink maxFeeContract = new TransferLink(feeCollector, 10000);
+        // Deploy contract with maximum allowed fee (10%)
+        TransferLink maxFeeContract = new TransferLink(feeCollector, 1000); // 10%
         maxFeeContract.setTokenSupport(address(token), true);
 
         vm.prank(alice);
@@ -856,11 +856,18 @@ contract TransferLinkTest is Test {
             bytes32(0)
         );
 
-        // Verify entire amount was taken as fee
+        // Verify 10% fee was taken
+        uint256 expectedFee = TRANSFER_AMOUNT * 1000 / 10000; // 10%
         (,,, uint256 amount, uint256 grossAmount,,,,,) = maxFeeContract.getTransfer(transferId);
-        assertEq(amount, 0);
+        assertEq(amount, TRANSFER_AMOUNT - expectedFee);
         assertEq(grossAmount, TRANSFER_AMOUNT);
-        assertEq(token.balanceOf(feeCollector), TRANSFER_AMOUNT);
+        assertEq(token.balanceOf(feeCollector), expectedFee);
+    }
+
+    function test_ExcessiveFeeRejected() public {
+        // Test that fees above 10% are rejected
+        vm.expectRevert(InvalidAmount.selector);
+        new TransferLink(feeCollector, 1001); // 10.01% should fail
     }
 
     function test_MultipleTransfersFromSameUser() public {
@@ -899,7 +906,7 @@ contract TransferLinkTest is Test {
         uint256 timeOffset
     ) public {
         // Bound inputs to reasonable ranges
-        amount = bound(amount, 1, INITIAL_SUPPLY / 4);
+        amount = bound(amount, transferLink.MIN_TRANSFER_AMOUNT(), INITIAL_SUPPLY / 4);
         timeOffset = bound(timeOffset, 1 hours, transferLink.MAX_EXPIRY_TIME());
 
         uint256 expiry = block.timestamp + timeOffset;

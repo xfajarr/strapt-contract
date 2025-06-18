@@ -21,6 +21,12 @@ abstract contract TransferLinkStorage {
      */
     mapping(address => bytes32[]) internal recipientTransfers;
 
+    /**
+     * @notice Mapping to track transfer IDs for each sender
+     * @dev This is used to allow senders to see all transfers they've created
+     */
+    mapping(address => bytes32[]) internal senderTransfers;
+
     /// @notice Fee collector address
     address public feeCollector;
 
@@ -35,6 +41,9 @@ abstract contract TransferLinkStorage {
 
     /// @notice Default expiry time (24 hours)
     uint256 public constant DEFAULT_EXPIRY_TIME = 24 hours;
+
+    /// @notice Minimum transfer amount to prevent dust attacks
+    uint256 public constant MIN_TRANSFER_AMOUNT = 1000; // 1000 wei minimum
 
     /**
      * @notice Associates a transfer with a recipient for tracking purposes
@@ -55,6 +64,16 @@ abstract contract TransferLinkStorage {
             recipientTransfers[recipient].push(transferId);
             emit TransferAssociatedWithRecipient(transferId, recipient);
         }
+    }
+
+    /**
+     * @notice Associates a transfer with a sender for tracking purposes
+     * @dev This is called internally when creating any transfer
+     * @param transferId The ID of the transfer
+     * @param sender The sender address
+     */
+    function _associateTransferWithSender(bytes32 transferId, address sender) internal {
+        senderTransfers[sender].push(transferId);
     }
 
     /**

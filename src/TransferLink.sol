@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./ITransferLink.sol";
 import "./TransferLinkStorage.sol";
 
@@ -12,7 +13,7 @@ import "./TransferLinkStorage.sol";
  * @title TransferLink
  * @author STRAPT Team
  */
-contract TransferLink is ReentrancyGuard, Ownable, ITransferLink, TransferLinkStorage {
+contract TransferLink is ReentrancyGuard, Ownable, Pausable, ITransferLink, TransferLinkStorage {
     using SafeERC20 for IERC20;
 
     /// @notice Maximum fee in basis points (10% = 1000 basis points)
@@ -47,7 +48,7 @@ contract TransferLink is ReentrancyGuard, Ownable, ITransferLink, TransferLinkSt
         uint256 expiry,
         bool hasPassword,
         bytes32 claimCodeHash
-    ) external nonReentrant returns (bytes32) {
+    ) external nonReentrant whenNotPaused returns (bytes32) {
         // Input validation
         if (tokenAddress == address(0)) revert InvalidTokenAddress();
         if (amount == 0) revert InvalidAmount();
@@ -85,6 +86,8 @@ contract TransferLink is ReentrancyGuard, Ownable, ITransferLink, TransferLinkSt
         if (feeInBasisPoints > 0) {
             fee = (amount * feeInBasisPoints) / 10000;
             transferAmount = amount - fee;
+            // Ensure transfer amount is not zero after fee deduction
+            if (transferAmount == 0) revert InvalidAmount();
         }
 
         // Create the transfer record
@@ -141,7 +144,7 @@ contract TransferLink is ReentrancyGuard, Ownable, ITransferLink, TransferLinkSt
         uint256 expiry,
         bool hasPassword,
         bytes32 claimCodeHash
-    ) external nonReentrant returns (bytes32) {
+    ) external nonReentrant whenNotPaused returns (bytes32) {
         // Input validation
         if (tokenAddress == address(0)) revert InvalidTokenAddress();
         if (amount == 0) revert InvalidAmount();
@@ -182,6 +185,8 @@ contract TransferLink is ReentrancyGuard, Ownable, ITransferLink, TransferLinkSt
         if (feeInBasisPoints > 0) {
             fee = (amount * feeInBasisPoints) / 10000;
             transferAmount = amount - fee;
+            // Ensure transfer amount is not zero after fee deduction
+            if (transferAmount == 0) revert InvalidAmount();
         }
 
         // Create the transfer record
@@ -228,6 +233,7 @@ contract TransferLink is ReentrancyGuard, Ownable, ITransferLink, TransferLinkSt
     function claimTransfer(bytes32 transferId, string calldata claimCode)
         external
         nonReentrant
+        whenNotPaused
     {
         Transfer storage transfer = transfers[transferId];
 
@@ -260,7 +266,7 @@ contract TransferLink is ReentrancyGuard, Ownable, ITransferLink, TransferLinkSt
      * @notice Refunds an expired transfer back to the sender
      * @param transferId The ID of the transfer to refund
      */
-    function refundTransfer(bytes32 transferId) external nonReentrant {
+    function refundTransfer(bytes32 transferId) external nonReentrant whenNotPaused {
         Transfer storage transfer = transfers[transferId];
 
         // Validate transfer
@@ -368,6 +374,7 @@ contract TransferLink is ReentrancyGuard, Ownable, ITransferLink, TransferLinkSt
      * @param newFeeInBasisPoints The new fee in basis points (1/100 of a percent, e.g. 20 = 0.2%)
      */
     function setFee(uint16 newFeeInBasisPoints) external onlyOwner {
+        if (newFeeInBasisPoints > MAX_FEE_BASIS_POINTS) revert InvalidAmount();
         feeInBasisPoints = newFeeInBasisPoints;
         emit FeeUpdated(newFeeInBasisPoints);
     }
@@ -380,5 +387,40 @@ contract TransferLink is ReentrancyGuard, Ownable, ITransferLink, TransferLinkSt
         if (newFeeCollector == address(0)) revert ZeroFeeCollector();
         feeCollector = newFeeCollector;
         emit FeeCollectorUpdated(newFeeCollector);
+    }
+
+    /**
+     * @notice Pause the contract in case of emergency
+     * @dev Only owner can pause the contract
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @notice Unpause the contract
+     * @dev Only owner can unpause the contract
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
+    /**
+     * @notice Batch set token support for multiple tokens
+     * @param tokenAddresses Array of token addresses
+     * @param supportStatuses Array of support statuses corresponding to token addresses
+     */
+    function batchSetTokenSupport(
+        address[] calldata tokenAddresses,
+        bool[] calldata supportStatuses
+    ) external onlyOwner {
+        if (tokenAddresses.length != supportStatuses.length) revert InvalidAmount();
+        if (tokenAddresses.length == 0) revert InvalidAmount();
+
+        for (uint256 i = 0; i < tokenAddresses.length; i++) {
+            if (tokenAddresses[i] == address(0)) revert InvalidTokenAddress();
+            supportedTokens[tokenAddresses[i]] = supportStatuses[i];
+            emit TokenSupportUpdated(tokenAddresses[i], supportStatuses[i]);
+        }
     }
 }

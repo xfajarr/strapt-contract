@@ -85,6 +85,9 @@ interface ITransferLink {
         address indexed feeCollector
     );
 
+    event ContractPaused(address indexed by);
+    event ContractUnpaused(address indexed by);
+
     /**
      * @notice Creates a direct transfer to a specific recipient
      * @param recipient The recipient address
@@ -177,6 +180,20 @@ interface ITransferLink {
      * @return isPasswordProtected True if the transfer requires a password
      */
     function isPasswordProtected(bytes32 transferId) external view returns (uint8);
+
+    /**
+     * @notice Gets all unclaimed transfer IDs for a specific recipient
+     * @param recipient The recipient address
+     * @return transferIds Array of unclaimed transfer IDs for the recipient
+     */
+    function getUnclaimedTransfers(address recipient) external view returns (bytes32[] memory);
+
+    /**
+     * @notice Gets all unclaimed transfer IDs sent by a specific sender
+     * @param sender The sender address
+     * @return transferIds Array of unclaimed transfer IDs sent by the sender
+     */
+    function getUnclaimedTransfersBySender(address sender) external view returns (bytes32[] memory);
 
     /**
      * @notice Set token support status
