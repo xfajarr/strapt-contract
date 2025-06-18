@@ -864,13 +864,30 @@ contract TransferLinkTest is Test {
         vm.warp(expiry + 1);
         assertFalse(transferLink.isTransferClaimable(transferId));
 
-        // Reset time to before expiry and claim
-        vm.warp(expiry - 1 hours);
+        // Create a new transfer to test claiming
+        uint256 currentTime = block.timestamp + 2 days; // Move forward instead of backward
+        vm.warp(currentTime);
+        uint256 newExpiry = currentTime + 1 days;
+
+        vm.prank(alice);
+        bytes32 transferId2 = transferLink.createDirectTransfer(
+            bob,
+            address(token),
+            TRANSFER_AMOUNT,
+            newExpiry,
+            false,
+            bytes32(0)
+        );
+
+        // Should be claimable initially
+        assertTrue(transferLink.isTransferClaimable(transferId2));
+
+        // Claim the transfer
         vm.prank(bob);
-        transferLink.claimTransfer(transferId, "");
+        transferLink.claimTransfer(transferId2, "");
 
         // Should not be claimable after being claimed
-        assertFalse(transferLink.isTransferClaimable(transferId));
+        assertFalse(transferLink.isTransferClaimable(transferId2));
     }
 
     function test_GetRecipientTransfers() public {
