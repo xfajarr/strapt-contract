@@ -678,6 +678,169 @@ contract TransferLinkTest is Test {
         transferLink.refundTransfer(transferId);
     }
 
+    // ============ Instant Refund Tests ============
+
+    function test_InstantRefund_Success() public {
+        uint256 expiry = block.timestamp + 1 days;
+
+        // Create a transfer
+        vm.prank(alice);
+        bytes32 transferId = transferLink.createDirectTransfer(
+            bob,
+            address(token),
+            TRANSFER_AMOUNT,
+            expiry,
+            false,
+            bytes32(0)
+        );
+
+        uint256 aliceBalanceBefore = token.balanceOf(alice);
+        uint256 expectedAmount = TRANSFER_AMOUNT - (TRANSFER_AMOUNT * FEE_BASIS_POINTS / 10000);
+
+        vm.expectEmit(true, true, true, true);
+        emit TransferRefunded(transferId, alice, expectedAmount);
+
+        // Instantly refund the transfer (before expiry)
+        vm.prank(alice);
+        transferLink.instantRefund(transferId);
+
+        // Verify balances
+        assertEq(token.balanceOf(alice), aliceBalanceBefore + expectedAmount);
+        assertEq(token.balanceOf(address(transferLink)), 0);
+
+        // Verify transfer status
+        (,,,,,, uint8 status,,,) = transferLink.getTransfer(transferId);
+        assertEq(status, uint8(TransferStatus.Refunded));
+    }
+
+    function test_InstantRefund_BeforeExpiry() public {
+        uint256 expiry = block.timestamp + 1 days;
+
+        // Create a transfer
+        vm.prank(alice);
+        bytes32 transferId = transferLink.createDirectTransfer(
+            bob,
+            address(token),
+            TRANSFER_AMOUNT,
+            expiry,
+            false,
+            bytes32(0)
+        );
+
+        // Should be able to instantly refund even before expiry
+        vm.prank(alice);
+        transferLink.instantRefund(transferId);
+
+        // Verify transfer status
+        (,,,,,, uint8 status,,,) = transferLink.getTransfer(transferId);
+        assertEq(status, uint8(TransferStatus.Refunded));
+    }
+
+    function test_InstantRefund_AfterExpiry() public {
+        uint256 expiry = block.timestamp + 1 days;
+
+        // Create a transfer
+        vm.prank(alice);
+        bytes32 transferId = transferLink.createDirectTransfer(
+            bob,
+            address(token),
+            TRANSFER_AMOUNT,
+            expiry,
+            false,
+            bytes32(0)
+        );
+
+        // Fast forward past expiry
+        vm.warp(expiry + 1);
+
+        // Should still be able to instantly refund after expiry
+        vm.prank(alice);
+        transferLink.instantRefund(transferId);
+
+        // Verify transfer status
+        (,,,,,, uint8 status,,,) = transferLink.getTransfer(transferId);
+        assertEq(status, uint8(TransferStatus.Refunded));
+    }
+
+    function test_InstantRefund_RevertNotTransferSender() public {
+        uint256 expiry = block.timestamp + 1 days;
+
+        // Create a transfer
+        vm.prank(alice);
+        bytes32 transferId = transferLink.createDirectTransfer(
+            bob,
+            address(token),
+            TRANSFER_AMOUNT,
+            expiry,
+            false,
+            bytes32(0)
+        );
+
+        // Try to instantly refund as non-sender
+        vm.prank(bob);
+        vm.expectRevert(NotTransferSender.selector);
+        transferLink.instantRefund(transferId);
+    }
+
+    function test_InstantRefund_RevertAlreadyClaimed() public {
+        uint256 expiry = block.timestamp + 1 days;
+
+        // Create and claim a transfer
+        vm.prank(alice);
+        bytes32 transferId = transferLink.createDirectTransfer(
+            bob,
+            address(token),
+            TRANSFER_AMOUNT,
+            expiry,
+            false,
+            bytes32(0)
+        );
+
+        vm.prank(bob);
+        transferLink.claimTransfer(transferId, "");
+
+        // Try to instantly refund claimed transfer
+        vm.prank(alice);
+        vm.expectRevert(TransferNotRefundable.selector);
+        transferLink.instantRefund(transferId);
+    }
+
+    function test_InstantRefund_RevertTransferDoesNotExist() public {
+        bytes32 nonExistentId = keccak256("nonexistent");
+
+        vm.prank(alice);
+        vm.expectRevert(TransferDoesNotExist.selector);
+        transferLink.instantRefund(nonExistentId);
+    }
+
+    function test_InstantRefund_LinkTransfer() public {
+        uint256 expiry = block.timestamp + 1 days;
+
+        // Create a link transfer
+        vm.prank(alice);
+        bytes32 transferId = transferLink.createLinkTransfer(
+            address(token),
+            TRANSFER_AMOUNT,
+            expiry,
+            false,
+            bytes32(0)
+        );
+
+        uint256 aliceBalanceBefore = token.balanceOf(alice);
+        uint256 expectedAmount = TRANSFER_AMOUNT - (TRANSFER_AMOUNT * FEE_BASIS_POINTS / 10000);
+
+        // Should be able to instantly refund link transfers too
+        vm.prank(alice);
+        transferLink.instantRefund(transferId);
+
+        // Verify balances
+        assertEq(token.balanceOf(alice), aliceBalanceBefore + expectedAmount);
+
+        // Verify transfer status
+        (,,,,,, uint8 status,,,) = transferLink.getTransfer(transferId);
+        assertEq(status, uint8(TransferStatus.Refunded));
+    }
+
     // ============ View Function Tests ============
 
     function test_IsTransferClaimable() public {

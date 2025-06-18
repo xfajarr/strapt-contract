@@ -138,6 +138,12 @@ interface ITransferLink {
     function refundTransfer(bytes32 transferId) external;
 
     /**
+     * @notice Instantly refunds a transfer back to the sender (regardless of expiry)
+     * @param transferId The ID of the transfer to refund instantly
+     */
+    function instantRefund(bytes32 transferId) external;
+
+    /**
      * @notice Gets the details of a transfer
      * @param transferId The ID of the transfer
      * @return sender The address that created the transfer

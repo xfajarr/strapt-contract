@@ -289,6 +289,27 @@ contract TransferLink is ReentrancyGuard, Ownable, Pausable, ITransferLink, Tran
     }
 
     /**
+     * @notice Instantly refunds a transfer back to the sender (regardless of expiry)
+     * @param transferId The ID of the transfer to refund instantly
+     */
+    function instantRefund(bytes32 transferId) external nonReentrant whenNotPaused {
+        Transfer storage transfer = transfers[transferId];
+
+        // Validate transfer
+        if (transfer.createdAt == 0) revert TransferDoesNotExist();
+        if (transfer.status != TransferStatus.Pending) revert TransferNotRefundable();
+        if (msg.sender != transfer.sender) revert NotTransferSender();
+
+        // Update transfer status first to prevent reentrancy
+        transfer.status = TransferStatus.Refunded;
+
+        // Transfer tokens back to sender
+        IERC20(transfer.tokenAddress).safeTransfer(transfer.sender, transfer.amount);
+
+        emit TransferRefunded(transferId, transfer.sender, transfer.amount);
+    }
+
+    /**
      * @notice Gets the details of a transfer
      * @param transferId The ID of the transfer
      * @return sender The address that created the transfer
