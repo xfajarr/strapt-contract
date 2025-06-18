@@ -113,8 +113,9 @@ contract TransferLink is ReentrancyGuard, Ownable, Pausable, ITransferLink, Tran
             IERC20(tokenAddress).safeTransfer(feeCollector, fee);
         }
 
-        // Associate the transfer with the recipient for tracking
+        // Associate the transfer with the recipient and sender for tracking
         _associateTransferWithRecipient(transferId, recipient);
+        _associateTransferWithSender(transferId, msg.sender);
 
         emit TransferCreated(
             transferId,
@@ -211,6 +212,9 @@ contract TransferLink is ReentrancyGuard, Ownable, Pausable, ITransferLink, Tran
         if (fee > 0) {
             IERC20(tokenAddress).safeTransfer(feeCollector, fee);
         }
+
+        // Associate the transfer with the sender for tracking
+        _associateTransferWithSender(transferId, msg.sender);
 
         emit TransferCreated(
             transferId,

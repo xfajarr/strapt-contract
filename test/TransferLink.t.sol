@@ -745,6 +745,167 @@ contract TransferLinkTest is Test {
         assertEq(aliceTransfers.length, 0);
     }
 
+    // ============ Unclaimed Transfer Tests ============
+
+    function test_GetUnclaimedTransfers() public {
+        uint256 expiry = block.timestamp + 1 days;
+
+        // Create multiple transfers for bob
+        vm.prank(alice);
+        bytes32 transferId1 = transferLink.createDirectTransfer(
+            bob,
+            address(token),
+            TRANSFER_AMOUNT,
+            expiry,
+            false,
+            bytes32(0)
+        );
+
+        vm.prank(charlie);
+        bytes32 transferId2 = transferLink.createDirectTransfer(
+            bob,
+            address(token),
+            TRANSFER_AMOUNT / 2,
+            expiry,
+            false,
+            bytes32(0)
+        );
+
+        // Both should be unclaimed initially
+        bytes32[] memory unclaimedTransfers = transferLink.getUnclaimedTransfers(bob);
+        assertEq(unclaimedTransfers.length, 2);
+        assertEq(unclaimedTransfers[0], transferId1);
+        assertEq(unclaimedTransfers[1], transferId2);
+
+        // Claim one transfer
+        vm.prank(bob);
+        transferLink.claimTransfer(transferId1, "");
+
+        // Should only have one unclaimed transfer now
+        unclaimedTransfers = transferLink.getUnclaimedTransfers(bob);
+        assertEq(unclaimedTransfers.length, 1);
+        assertEq(unclaimedTransfers[0], transferId2);
+
+        // Fast forward past expiry
+        vm.warp(expiry + 1);
+
+        // Should have no unclaimed transfers (expired)
+        unclaimedTransfers = transferLink.getUnclaimedTransfers(bob);
+        assertEq(unclaimedTransfers.length, 0);
+    }
+
+    function test_GetUnclaimedTransfersBySender() public {
+        uint256 expiry = block.timestamp + 1 days;
+
+        // Alice creates multiple transfers
+        vm.startPrank(alice);
+        bytes32 transferId1 = transferLink.createDirectTransfer(
+            bob,
+            address(token),
+            TRANSFER_AMOUNT,
+            expiry,
+            false,
+            bytes32(0)
+        );
+
+        bytes32 transferId2 = transferLink.createLinkTransfer(
+            address(token),
+            TRANSFER_AMOUNT / 2,
+            expiry,
+            false,
+            bytes32(0)
+        );
+
+        bytes32 transferId3 = transferLink.createDirectTransfer(
+            charlie,
+            address(token),
+            TRANSFER_AMOUNT / 3,
+            expiry,
+            false,
+            bytes32(0)
+        );
+        vm.stopPrank();
+
+        // All should be unclaimed initially
+        bytes32[] memory unclaimedBySender = transferLink.getUnclaimedTransfersBySender(alice);
+        assertEq(unclaimedBySender.length, 3);
+        assertEq(unclaimedBySender[0], transferId1);
+        assertEq(unclaimedBySender[1], transferId2);
+        assertEq(unclaimedBySender[2], transferId3);
+
+        // Bob claims his transfer
+        vm.prank(bob);
+        transferLink.claimTransfer(transferId1, "");
+
+        // Should have 2 unclaimed transfers now
+        unclaimedBySender = transferLink.getUnclaimedTransfersBySender(alice);
+        assertEq(unclaimedBySender.length, 2);
+        assertEq(unclaimedBySender[0], transferId2);
+        assertEq(unclaimedBySender[1], transferId3);
+
+        // Charlie claims his transfer
+        vm.prank(charlie);
+        transferLink.claimTransfer(transferId3, "");
+
+        // Should have 1 unclaimed transfer now (the link transfer)
+        unclaimedBySender = transferLink.getUnclaimedTransfersBySender(alice);
+        assertEq(unclaimedBySender.length, 1);
+        assertEq(unclaimedBySender[0], transferId2);
+
+        // Someone claims the link transfer
+        vm.prank(bob);
+        transferLink.claimTransfer(transferId2, "");
+
+        // Should have no unclaimed transfers now
+        unclaimedBySender = transferLink.getUnclaimedTransfersBySender(alice);
+        assertEq(unclaimedBySender.length, 0);
+    }
+
+    function test_GetUnclaimedTransfers_EmptyForNewAddress() public {
+        address newUser = makeAddr("newUser");
+
+        // New address should have no unclaimed transfers
+        bytes32[] memory unclaimedTransfers = transferLink.getUnclaimedTransfers(newUser);
+        assertEq(unclaimedTransfers.length, 0);
+
+        bytes32[] memory unclaimedBySender = transferLink.getUnclaimedTransfersBySender(newUser);
+        assertEq(unclaimedBySender.length, 0);
+    }
+
+    function test_GetUnclaimedTransfers_RefundedTransfersNotIncluded() public {
+        uint256 expiry = block.timestamp + 1 days;
+
+        // Create a transfer
+        vm.prank(alice);
+        bytes32 transferId = transferLink.createDirectTransfer(
+            bob,
+            address(token),
+            TRANSFER_AMOUNT,
+            expiry,
+            false,
+            bytes32(0)
+        );
+
+        // Should be unclaimed initially
+        bytes32[] memory unclaimedTransfers = transferLink.getUnclaimedTransfers(bob);
+        assertEq(unclaimedTransfers.length, 1);
+
+        bytes32[] memory unclaimedBySender = transferLink.getUnclaimedTransfersBySender(alice);
+        assertEq(unclaimedBySender.length, 1);
+
+        // Fast forward past expiry and refund
+        vm.warp(expiry + 1);
+        vm.prank(alice);
+        transferLink.refundTransfer(transferId);
+
+        // Should have no unclaimed transfers after refund
+        unclaimedTransfers = transferLink.getUnclaimedTransfers(bob);
+        assertEq(unclaimedTransfers.length, 0);
+
+        unclaimedBySender = transferLink.getUnclaimedTransfersBySender(alice);
+        assertEq(unclaimedBySender.length, 0);
+    }
+
     // ============ Admin Function Tests ============
 
     function test_SetTokenSupport() public {

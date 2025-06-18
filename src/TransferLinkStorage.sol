@@ -86,6 +86,60 @@ abstract contract TransferLinkStorage {
     }
 
     /**
+     * @notice Gets all unclaimed transfer IDs for a specific recipient
+     * @param recipient The recipient address
+     * @return transferIds Array of unclaimed transfer IDs for the recipient
+     */
+    function getUnclaimedTransfers(address recipient) external view returns (bytes32[] memory) {
+        bytes32[] memory allTransfers = recipientTransfers[recipient];
+        bytes32[] memory tempUnclaimed = new bytes32[](allTransfers.length);
+        uint256 unclaimedCount = 0;
+
+        for (uint256 i = 0; i < allTransfers.length; i++) {
+            Transfer storage transfer = transfers[allTransfers[i]];
+            if (transfer.status == TransferStatus.Pending && block.timestamp <= transfer.expiry) {
+                tempUnclaimed[unclaimedCount] = allTransfers[i];
+                unclaimedCount++;
+            }
+        }
+
+        // Create array with exact size
+        bytes32[] memory unclaimedTransfers = new bytes32[](unclaimedCount);
+        for (uint256 i = 0; i < unclaimedCount; i++) {
+            unclaimedTransfers[i] = tempUnclaimed[i];
+        }
+
+        return unclaimedTransfers;
+    }
+
+    /**
+     * @notice Gets all unclaimed transfer IDs sent by a specific sender
+     * @param sender The sender address
+     * @return transferIds Array of unclaimed transfer IDs sent by the sender
+     */
+    function getUnclaimedTransfersBySender(address sender) external view returns (bytes32[] memory) {
+        bytes32[] memory allTransfers = senderTransfers[sender];
+        bytes32[] memory tempUnclaimed = new bytes32[](allTransfers.length);
+        uint256 unclaimedCount = 0;
+
+        for (uint256 i = 0; i < allTransfers.length; i++) {
+            Transfer storage transfer = transfers[allTransfers[i]];
+            if (transfer.status == TransferStatus.Pending) {
+                tempUnclaimed[unclaimedCount] = allTransfers[i];
+                unclaimedCount++;
+            }
+        }
+
+        // Create array with exact size
+        bytes32[] memory unclaimedTransfers = new bytes32[](unclaimedCount);
+        for (uint256 i = 0; i < unclaimedCount; i++) {
+            unclaimedTransfers[i] = tempUnclaimed[i];
+        }
+
+        return unclaimedTransfers;
+    }
+
+    /**
      * @notice Generates a transfer ID for direct transfers
      * @dev Internal function used by createDirectTransfer
      */

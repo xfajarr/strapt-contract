@@ -182,20 +182,6 @@ interface ITransferLink {
     function isPasswordProtected(bytes32 transferId) external view returns (uint8);
 
     /**
-     * @notice Gets all unclaimed transfer IDs for a specific recipient
-     * @param recipient The recipient address
-     * @return transferIds Array of unclaimed transfer IDs for the recipient
-     */
-    function getUnclaimedTransfers(address recipient) external view returns (bytes32[] memory);
-
-    /**
-     * @notice Gets all unclaimed transfer IDs sent by a specific sender
-     * @param sender The sender address
-     * @return transferIds Array of unclaimed transfer IDs sent by the sender
-     */
-    function getUnclaimedTransfersBySender(address sender) external view returns (bytes32[] memory);
-
-    /**
      * @notice Set token support status
      * @param tokenAddress The token address to update
      * @param isSupported Whether the token is supported
