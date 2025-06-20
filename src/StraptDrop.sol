@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -37,7 +37,7 @@ contract StraptDrop is ReentrancyGuard, Ownable {
     uint256 private constant MIN_AMOUNT = 1;
 
     // Fee configuration
-    uint256 public feePercentage = 0; // 0.1% (in basis points, 10000 = 100%)
+    uint256 public feePercentage = 10; // 0.1% (in basis points, 10000 = 100%)
     address public feeCollector;
 
     // Drop structure
