@@ -18,10 +18,10 @@ struct Gift {
 
 // Custom errors for gas optimization
 error InvalidFeePercentage();
-error Error__InvalidAddress();
-error InvalidAmount();
+error Gift__InvalidAddress();
+error Gift__InvalidAmount();
 error InvalidRecipients();
-error InvalidExpiryTime();
+error Gift__InvalidExpiryTime();
 error GiftNotActive();
 error GiftHasExpired();
 error AllClaimsTaken();

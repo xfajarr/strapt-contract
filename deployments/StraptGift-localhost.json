@@ -1,0 +1,11 @@
+{
+  "contractName": "StraptGift",
+  "contractAddress": "0xE1cE945ba38F07d4b66cbd1986b842408B6312a3",
+  "network": "localhost",
+  "chainId": 31337,
+  "deployer": "0x1B2FC03AD5405347a60b407929633FFc544f1Db6",
+  "deploymentTime": 1,
+  "blockNumber": 1,
+  "feeCollector": "0x5BAC06Ba1E1be967f8b9a6e962D1bC2a121F080a",
+  "feePercentage": 0,
+}

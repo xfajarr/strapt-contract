@@ -8,5 +8,15 @@ remappings = [
 via_ir = true
 optimizer = true
 optimizer_runs = 200
+fs_permissions = [{ access = "read-write", path = "./deployments" }]
+
+# Network configurations
+[rpc_endpoints]
+mantle_sepolia = "${MANTLE_RPC_URL}"
+
+# Comment out or remove the etherscan section if you don't want automatic verification
+# [etherscan]
+# mantle_sepolia = { key = "${MANTLESCAN_API_KEY}", url = "https://api-sepolia.mantlescan.xyz/api" }
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+

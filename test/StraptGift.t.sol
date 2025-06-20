@@ -3,13 +3,13 @@ pragma solidity ^0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
 import {StraptGift} from "../src/StraptGift.sol";
-import {MockERC20} from "./mocks/MockERC20.sol";
+import {MockERC20} from "../src/MockERC20.sol";
 import {
     InvalidFeePercentage,
-    Error__InvalidAddress,
-    InvalidAmount,
+    Gift__InvalidAddress,
+    Gift__InvalidAmount,
     InvalidRecipients,
-    InvalidExpiryTime,
+    Gift__InvalidExpiryTime,
     GiftNotActive,
     GiftHasExpired,
     AllClaimsTaken,
@@ -128,7 +128,7 @@ contract StraptGiftTest is Test {
     }
 
     function test_SetFeeCollector_RevertZeroAddress() public {
-        vm.expectRevert(Error__InvalidAddress.selector);
+        vm.expectRevert(Gift__InvalidAddress.selector);
         straptGift.setFeeCollector(address(0));
     }
 
@@ -230,7 +230,7 @@ contract StraptGiftTest is Test {
 
     function test_CreateGift_RevertInvalidAmount() public {
         vm.prank(creator);
-        vm.expectRevert(InvalidAmount.selector);
+        vm.expectRevert(Gift__InvalidAmount.selector);
         straptGift.createGift(
             address(token),
             0, // Invalid amount
@@ -256,7 +256,7 @@ contract StraptGiftTest is Test {
 
     function test_CreateGift_RevertInvalidExpiryTime() public {
         vm.prank(creator);
-        vm.expectRevert(InvalidExpiryTime.selector);
+        vm.expectRevert(Gift__InvalidExpiryTime.selector);
         straptGift.createGift(
             address(token),
             GIFT_AMOUNT,
@@ -269,7 +269,7 @@ contract StraptGiftTest is Test {
 
     function test_CreateGift_RevertInvalidTokenAddress() public {
         vm.prank(creator);
-        vm.expectRevert(Error__InvalidAddress.selector);
+        vm.expectRevert(Gift__InvalidAddress.selector);
         straptGift.createGift(
             address(0), // Invalid token address
             GIFT_AMOUNT,

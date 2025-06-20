@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
 import {TransferLink} from "../src/TransferLink.sol";
-import {MockERC20} from "./mocks/MockERC20.sol";
+import {MockERC20} from "../src/MockERC20.sol";
 import {
     TransferStatus,
     InvalidTokenAddress,

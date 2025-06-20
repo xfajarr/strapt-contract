@@ -42,7 +42,7 @@ contract StraptGift is ReentrancyGuard, Ownable, IStraptGift, StraptGiftStorage 
      * @param _feeCollector New fee collector address
      */
     function setFeeCollector(address _feeCollector) external onlyOwner {
-        if (_feeCollector == address(0)) revert Error__InvalidAddress();
+        if (_feeCollector == address(0)) revert Gift__InvalidAddress();
 
         address oldCollector = feeCollector;
         feeCollector = _feeCollector;
@@ -69,10 +69,10 @@ contract StraptGift is ReentrancyGuard, Ownable, IStraptGift, StraptGiftStorage 
         string calldata message
     ) external nonReentrant returns (bytes32) {
         // Input validation
-        if (totalAmount == 0) revert InvalidAmount();
+        if (totalAmount == 0) revert Gift__InvalidAmount();
         if (totalRecipients == 0) revert InvalidRecipients();
-        if (expiryTime <= block.timestamp) revert InvalidExpiryTime();
-        if (tokenAddress == address(0)) revert Error__InvalidAddress();
+        if (expiryTime <= block.timestamp) revert Gift__InvalidExpiryTime();
+        if (tokenAddress == address(0)) revert Gift__InvalidAddress();
 
         // Calculate fee
         uint256 feeAmount = (totalAmount * feePercentage) / BASIS_POINTS;
